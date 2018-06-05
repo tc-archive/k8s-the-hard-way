@@ -82,20 +82,25 @@ function get-static-ip() {
 #
 
 K8S_CONTROLER_INSTANCE_PREFIX="controller"
+K8S_CONTROLLER_INSTANCE_PRIVATE_IP_PREFIX="10.240.0.1"
+K8S_WORKER_INSTANCE_PREFIX="worker"
+K8S_WORKER_INSTANCE_PRIVATE_IP_PREFIX="10.240.0.2"
+K8S_INSTANCE_VOLUME_SIZE="200GB"
+K8S_OS_IMG_FAMILY="ubuntu-1804-lts" 
+K8S_OS_IMG_PROJECT="ubuntu-os-cloud"
+K8S_MACHINE_TYPE="n1-standard-1"
 
 function create-controller-instances() {
-  K8S_INSTANCE_VOLUME_SIZE="200GB"
-  K8S_INSTANCE_PRIVATE_IP_PREFIX="10.240.0.1"
 
   for i in 0 1 2; do
     echo "Creating instance: ${K8S_CONTROLER_INSTANCE_PREFIX}-${i}"
     gcloud compute instances create "${K8S_CONTROLER_INSTANCE_PREFIX}-${i}" \
       --async \
       --boot-disk-size "${K8S_INSTANCE_VOLUME_SIZE}" \
-      --image-family ubuntu-1804-lts \
-      --image-project ubuntu-os-cloud \
-      --machine-type n1-standard-1 \
-      --private-network-ip "${K8S_INSTANCE_PRIVATE_IP_PREFIX}${i}" \
+      --image-family "${K8S_OS_IMG_FAMILY}" \
+      --image-project "${K8S_OS_IMG_PROJECT}" \
+      --machine-type "${K8S_MACHINE_TYPE}" \
+      --private-network-ip "${K8S_CONTROLLER_INSTANCE_PRIVATE_IP_PREFIX}${i}" \
       --subnet "${K8S_SUBNET}" \
       --can-ip-forward \
       --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
@@ -110,22 +115,21 @@ function delete-controller-instances() {
   done
 }
 
-K8S_WORKER_INSTANCE_PREFIX="worker"
-
+# NB: The pod network cidr range is specified for each instance as gcloud metadata. 
 function create-worker-instances() {
   for i in 0 1 2; do
     echo "Creating instance: ${K8S_WORKER_INSTANCE_PREFIX}-${i}"
     gcloud compute instances create "${K8S_WORKER_INSTANCE_PREFIX}-${i}" \
       --async \
-      --boot-disk-size 200GB \
-      --can-ip-forward \
-      --image-family ubuntu-1804-lts \
-      --image-project ubuntu-os-cloud \
-      --machine-type n1-standard-1 \
+      --boot-disk-size "${K8S_INSTANCE_VOLUME_SIZE}" \
+      --image-family "${K8S_OS_IMG_FAMILY}" \
+      --image-project "${K8S_OS_IMG_PROJECT}" \
+      --machine-type "${K8S_MACHINE_TYPE}" \
       --metadata pod-cidr=10.200.${i}.0/24 \
-      --private-network-ip 10.240.0.2${i} \
+      --private-network-ip "${K8S_CONTROLLER_INSTANCE_PRIVATE_IP_PREFIX}${i}" \
       --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
       --subnet "${K8S_SUBNET}" \
+      --can-ip-forward \
       --tags kubernetes-the-hard-way,worker
   done
 }
@@ -144,6 +148,21 @@ function check-op-status() {
 
 function verify-instances() {
   gcloud compute instances list
+}
+
+# IAAS *************************************************************************
+#
+
+function iaas-up() {
+  create-network
+  create-controller-instances
+  create-worker-instances
+}
+
+function iaas-down() {
+  delete-worker-instances
+  delete-controller-instances
+  delete-network
 }
 
 # Main ************************************************************************
