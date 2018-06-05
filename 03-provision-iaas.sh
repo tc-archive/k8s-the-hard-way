@@ -174,5 +174,3 @@ if [ ! -z "$1" ]; then
 else
   configuration
 fi
-
-
