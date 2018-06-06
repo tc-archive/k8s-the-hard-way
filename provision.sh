@@ -2,17 +2,17 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-source "${DIR}/03-provision-infra.sh"
-source "${DIR}/04-provision-pki.sh"
+source "${DIR}/03-provision-infra.sh" ""
+source "${DIR}/04-provision-pki.sh" ""
 
 # K8s Cluster *****************************************************************
 #
-function create-k8s-cluster() {
+function create-k8s() {
   create-infra
   create-certs
 }
 
-function delete-k8s-cluster() {
+function delete-k8s() {
   delete-certs
   delete-infra
 }
