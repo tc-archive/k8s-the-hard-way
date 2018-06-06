@@ -1,7 +1,7 @@
 
 # Do not checkin CA generated files
 **/ca-config.json
-**/ca-csr.json
-**/ca-key.pem
-**/ca.csr
-**/ca.pem
+**/*-csr.json
+**/*.csr
+**/*.-key.pem
+**/*.pem

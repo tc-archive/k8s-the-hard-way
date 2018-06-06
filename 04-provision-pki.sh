@@ -75,8 +75,8 @@ EOF
 
 
 function delete-certificate-authority() {
-  rm -f ca-key.pem ca.csr ca.pem
-  rm -f ca-csr.json 
+  rm -f ca-key.pem ca.pem
+  rm -f ca-csr.json ca.cs 
   rm -f ca-config.json 
 }
 
@@ -116,8 +116,8 @@ EOF
 }
 
 function delete-admin-certs() {
-  rm -f admin-key.pem admin.csr admin.pem  
-  rm -f admin-csr.json 
+  rm -f admin-key.pem admin.pem  
+  rm -f admin-csr.json admin.csr 
 }
 
 # Provision Kublet Client Certificates ****************************************
@@ -135,7 +135,7 @@ function delete-admin-certs() {
 # * https://kubernetes.io/docs/reference/access-authn-authz/node/
 # * https://kubernetes.io/docs/concepts/overview/components/#kubelet
 
-function create-kublet-certs() {
+function create-kubelet-certs() {
   for instance in worker-0 worker-1 worker-2; do
     cat > ${instance}-csr.json <<EOF
 {
@@ -172,9 +172,250 @@ EOF
   done
 }
 
-function delete-kublet-certs() {
-  rm -f worker-*.csr worker-*.pem worker-*-key.pem 
-  rm -f worker-*-csr.json 
+function delete-kubelet-certs() {
+  rm -f worker-*.pem worker-*-key.pem 
+  rm -f worker-*-csr.json worker-*.csr
+}
+
+# Provision Kube Controller Manager Client Certificates ***********************
+#
+
+function create-kube-controller-manager-certs() {
+  cat > kube-controller-manager-csr.json <<EOF
+{
+  "CN": "system:kube-controller-manager",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:kube-controller-manager",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+  cfssl gencert \
+    -ca=ca.pem \
+    -ca-key=ca-key.pem \
+    -config=ca-config.json \
+    -profile=kubernetes \
+    kube-controller-manager-csr.json | cfssljson -bare kube-controller-manager
+}
+
+function delete-kube-controller-manager-certs() {
+  delete -f kube-controller-manager-key.pem kube-controller-manager.pem
+  delete -f kube-controller-manager-csr.json kube-controller-manager.csr
+}
+
+# Provision Kube Proxy Client Certificates ************************************
+#
+
+function create-kube-proxy-certs() {
+  cat > kube-proxy-csr.json <<EOF
+{
+  "CN": "system:kube-proxy",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:node-proxier",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+  cfssl gencert \
+    -ca=ca.pem \
+    -ca-key=ca-key.pem \
+    -config=ca-config.json \
+    -profile=kubernetes \
+    kube-proxy-csr.json | cfssljson -bare kube-prox
+}
+
+function delete-kube-proxy-certs() {
+  delete -f kube-proxy-key.pem kube-proxy.pem
+  delete -f kube-proxy-csr.json kube-proxy.csr
+}
+
+# Provision Kube Scheduler Client Certificates ********************************
+#
+
+function create-kube-scheduler-certs() {
+  cat > kube-scheduler-csr.json <<EOF
+{
+  "CN": "system:kube-scheduler",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "system:kube-scheduler",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+  cfssl gencert \
+    -ca=ca.pem \
+    -ca-key=ca-key.pem \
+    -config=ca-config.json \
+    -profile=kubernetes \
+    kube-scheduler-csr.json | cfssljson -bare kube-scheduler
+}
+
+function delete-kube-scheduler-certs() {
+  delete -f kube-scheduler-key.pem kube-scheduler.pem
+  delete -f kube-scheduler-csr.json kube-scheduler.csr
+}
+
+
+# Provision Kubernetes API Server Client Certificates *************************
+#
+
+# The kubernetes-the-hard-way static IP address will be included in the list of 
+# subject alternative names for the Kubernetes API Server certificate. This will 
+# ensure the certificate can be validated by remote clients.
+
+function create-kube-api-server-certs() {
+  KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+  --region $(gcloud config get-value compute/region) \
+  --format 'value(address)')
+
+  cat > kubernetes-csr.json <<EOF
+{
+  "CN": "kubernetes",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+  cfssl gencert \
+    -ca=ca.pem \
+    -ca-key=ca-key.pem \
+    -config=ca-config.json \
+    -hostname=10.32.0.1,10.240.0.10,10.240.0.11,10.240.0.12,${KUBERNETES_PUBLIC_ADDRESS},127.0.0.1,kubernetes.default \
+    -profile=kubernetes \
+    kubernetes-csr.json | cfssljson -bare kubernetes
+}
+
+function delete-kube-api-server-certs() {
+  delete -f kubernetes-key.pem kubernetes.pem
+  delete -f kubernetes-csr.json kubernetes.csr
+}
+
+# Provision Kubernetes Service Account Key Pair *******************************
+#
+
+# The Kubernetes Controller Manager leverages a key pair to generate and sign 
+# service account tokens as describe in the managing service accounts 
+# documentation.
+#
+# * https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/
+
+function create-kube-service-acount-key-pair() {
+  cat > service-account-csr.json <<EOF
+{
+  "CN": "service-accounts",
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "Kubernetes The Hard Way",
+      "ST": "Oregon"
+    }
+  ]
+}
+EOF
+
+  cfssl gencert \
+    -ca=ca.pem \
+    -ca-key=ca-key.pem \
+    -config=ca-config.json \
+    -profile=kubernetes \
+    service-account-csr.json | cfssljson -bare service-account
+}
+
+function delete-kube-service-acount-key-pair() {
+  delete -f service-account-csr.json service-account.csr
+  delete -f service-account-key.pem service-account.pem
+}
+
+# Distribute the Client and Server Certificates *******************************
+#
+
+function deploy-controller-certificates() {
+  for instance in controller-0 controller-1 controller-2; do
+    gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
+      service-account-key.pem service-account.pem ${instance}:~/
+  done
+}
+
+function deploy-worker-certificates() {
+  for instance in worker-0 worker-1 worker-2; do
+    gcloud compute scp ca.pem ${instance}-key.pem ${instance}.pem ${instance}:~/
+  done
+}
+
+function deploy-certificates() {
+  deploy-controller-certificates
+  deploy-worker-certificates 
+}
+
+# Certificates ****************************************************************
+#
+
+function create-certs() {
+  create-certificate-authority 
+  create-kubelet-certs 
+  create-kube-controller-manager-certs
+  create-kube-proxy-certs 
+  create-kube-scheduler-certs
+  create-kube-api-server-certs
+  create-kube-service-acount-key-pair
+  deploy-certificates
+}
+
+function delete-certs() {
+  delete-kube-service-acount-key-pair
+  delete-kube-api-server-certs
+  delete-kube-scheduler-certs
+  delete-kube-proxy-certs 
+  delete-kube-controller-manager-certs
+  delete-kubelet-certs 
+  delete-certificate-authority 
 }
 
 # Main ************************************************************************
