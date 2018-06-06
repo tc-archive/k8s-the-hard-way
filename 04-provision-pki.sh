@@ -76,7 +76,7 @@ EOF
 
 function delete-certificate-authority() {
   rm -f ca-key.pem ca.pem
-  rm -f ca-csr.json ca.cs 
+  rm -f ca-csr.json ca.csr 
   rm -f ca-config.json 
 }
 
@@ -241,7 +241,7 @@ EOF
     -ca-key=ca-key.pem \
     -config=ca-config.json \
     -profile=kubernetes \
-    kube-proxy-csr.json | cfssljson -bare kube-prox
+    kube-proxy-csr.json | cfssljson -bare kube-proxy
 }
 
 function delete-kube-proxy-certs() {
