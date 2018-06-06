@@ -209,8 +209,8 @@ EOF
 }
 
 function delete-kube-controller-manager-certs() {
-  delete -f kube-controller-manager-key.pem kube-controller-manager.pem
-  delete -f kube-controller-manager-csr.json kube-controller-manager.csr
+  rm -f kube-controller-manager-key.pem kube-controller-manager.pem
+  rm -f kube-controller-manager-csr.json kube-controller-manager.csr
 }
 
 # Provision Kube Proxy Client Certificates ************************************
@@ -245,8 +245,8 @@ EOF
 }
 
 function delete-kube-proxy-certs() {
-  delete -f kube-proxy-key.pem kube-proxy.pem
-  delete -f kube-proxy-csr.json kube-proxy.csr
+  rm -f kube-proxy-key.pem kube-proxy.pem
+  rm -f kube-proxy-csr.json kube-proxy.csr
 }
 
 # Provision Kube Scheduler Client Certificates ********************************
@@ -281,8 +281,8 @@ EOF
 }
 
 function delete-kube-scheduler-certs() {
-  delete -f kube-scheduler-key.pem kube-scheduler.pem
-  delete -f kube-scheduler-csr.json kube-scheduler.csr
+  rm -f kube-scheduler-key.pem kube-scheduler.pem
+  rm -f kube-scheduler-csr.json kube-scheduler.csr
 }
 
 
@@ -327,8 +327,8 @@ EOF
 }
 
 function delete-kube-api-server-certs() {
-  delete -f kubernetes-key.pem kubernetes.pem
-  delete -f kubernetes-csr.json kubernetes.csr
+  rm -f kubernetes-key.pem kubernetes.pem
+  rm -f kubernetes-csr.json kubernetes.csr
 }
 
 # Provision Kubernetes Service Account Key Pair *******************************
@@ -369,8 +369,8 @@ EOF
 }
 
 function delete-kube-service-acount-key-pair() {
-  delete -f service-account-csr.json service-account.csr
-  delete -f service-account-key.pem service-account.pem
+  rm -f service-account-csr.json service-account.csr
+  rm -f service-account-key.pem service-account.pem
 }
 
 # Distribute the Client and Server Certificates *******************************
