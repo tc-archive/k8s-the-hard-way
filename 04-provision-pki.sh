@@ -24,7 +24,7 @@ function check-prerequisites() {
   fi
 }
 
-# Provisioning CA *************************************************************
+# Provision CA ****************************************************************
 #
 
 # Provision a Certificate Authority that can be used to generate additional 
