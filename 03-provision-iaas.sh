@@ -126,7 +126,7 @@ function create-worker-instances() {
       --image-project "${K8S_OS_IMG_PROJECT}" \
       --machine-type "${K8S_MACHINE_TYPE}" \
       --metadata pod-cidr=10.200.${i}.0/24 \
-      --private-network-ip "${K8S_CONTROLLER_INSTANCE_PRIVATE_IP_PREFIX}${i}" \
+      --private-network-ip "${K8S_WORKER_INSTANCE_PRIVATE_IP_PREFIX}${i}" \
       --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
       --subnet "${K8S_SUBNET}" \
       --can-ip-forward \
