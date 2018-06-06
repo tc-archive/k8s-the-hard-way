@@ -94,8 +94,8 @@ function create-controller-instances() {
 
   for i in 0 1 2; do
     echo "Creating instance: ${K8S_CONTROLER_INSTANCE_PREFIX}-${i}"
+    #  --async \
     gcloud compute instances create "${K8S_CONTROLER_INSTANCE_PREFIX}-${i}" \
-      --async \
       --boot-disk-size "${K8S_INSTANCE_VOLUME_SIZE}" \
       --image-family "${K8S_OS_IMG_FAMILY}" \
       --image-project "${K8S_OS_IMG_PROJECT}" \
