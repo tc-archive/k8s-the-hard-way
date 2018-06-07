@@ -6,3 +6,4 @@
 **/*.-key.pem
 **/*.pem
 **/*.kubeconfig
+**/encryption-config.yaml
