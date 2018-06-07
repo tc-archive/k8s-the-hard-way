@@ -21,9 +21,16 @@
 # Each kubeconfig requires a Kubernetes API Server to connect to. To support 
 # high availability the IP address assigned to the external load balancer 
 # fronting the Kubernetes API Servers will be used.
-KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
-  --region $(gcloud config get-value compute/region) \
-  --format 'value(address)')
+
+function create-k8s-public-ip() {
+  export KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+    --region $(gcloud config get-value compute/region) \
+    --format 'value(address)')
+}
+
+function delete-k8s-public-ip() {
+  unset KUBERNETES_PUBLIC_ADDRESS
+}
 
 # Provision Worker Node kubeconfig ********************************************
 #
@@ -214,6 +221,7 @@ function deploy-kubeconfigs() {
 #
 
 function create-kubeconfigs() {
+  create-k8s-public-ip
   create-worker-node-kubeconfigs
   create-kube-proxy-kubeconfig
   create-kube-controller-manager-kubeconfig
@@ -228,6 +236,7 @@ function delete-kubeconfigs() {
   delete-kube-controller-manager-kubeconfig
   delete-kube-proxy-kubeconfig
   delete-worker-node-kubeconfigs
+  delete-k8s-public-ip
 }
 
 # Main ************************************************************************
@@ -236,6 +245,4 @@ function delete-kubeconfigs() {
 # If provided, execute the specified function.
 if [ ! -z "$1" ]; then
   $1
-else
-  echo "No function defined."
 fi

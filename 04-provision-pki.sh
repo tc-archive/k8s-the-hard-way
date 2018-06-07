@@ -397,8 +397,9 @@ function deploy-certificates() {
 # Certificates ****************************************************************
 #
 
-function create-certs() {
-  create-certificate-authority 
+function create-pki() {
+  create-certificate-authority
+  create-admin-certs 
   create-kubelet-certs 
   create-kube-controller-manager-certs
   create-kube-proxy-certs 
@@ -408,13 +409,14 @@ function create-certs() {
   deploy-certificates
 }
 
-function delete-certs() {
+function delete-pki() {
   delete-kube-service-acount-key-pair
   delete-kube-api-server-certs
   delete-kube-scheduler-certs
   delete-kube-proxy-certs 
   delete-kube-controller-manager-certs
-  delete-kubelet-certs 
+  delete-kubelet-certs
+  delete-admin-certs
   delete-certificate-authority 
 }
 
@@ -424,6 +426,4 @@ function delete-certs() {
 # If provided, execute the specified function.
 if [ ! -z "$1" ]; then
   $1
-else
-  echo "No function defined."
 fi

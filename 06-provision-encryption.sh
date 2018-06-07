@@ -65,6 +65,4 @@ function delete-encryption() {
 # If provided, execute the specified function.
 if [ ! -z "$1" ]; then
   $1
-else
-  echo "No function defined."
 fi
