@@ -39,7 +39,7 @@ function delete-encryption-config() {
   rm -f encryption-config.yaml
 }
 
-function deploy-controller-encryption-onfigs() {
+function deploy-controller-encryption-configs() {
   echo "deploying controller kubeconfigs..."
   for instance in controller-0 controller-1 controller-2; do
     echo "deploying ${instance} kubeconfig..."
@@ -52,7 +52,7 @@ function deploy-controller-encryption-onfigs() {
 
 function create-encryption() {
   create-encryption-config
-  deploy-controller-encryption-onfigs
+  deploy-controller-encryption-configs
 }
 
 function delete-encryption() {
