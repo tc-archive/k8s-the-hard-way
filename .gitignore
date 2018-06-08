@@ -7,3 +7,4 @@
 **/*.pem
 **/*.kubeconfig
 **/encryption-config.yaml
+**/install-etcd.sh
