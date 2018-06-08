@@ -12,18 +12,17 @@ source "${DIR}/07-provision-etcd.sh" ""
 #
 function create-k8s() {
   create-infra
-  create-certs
+  create-pki
   create-kubeconfigs
   create-encryption
   create-etcd
 }
-
 function delete-k8s() {
   delete-etcd
-  delete-kubeconfigs
-  delete-certs
-  delete-infra
   delete-encryption
+  delete-kubeconfigs
+  delete-oki
+  delete-infra
 }
 
 # Main ************************************************************************
