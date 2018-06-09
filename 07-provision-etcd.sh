@@ -117,6 +117,8 @@ function _uninstall-etcd() {
   gcloud compute ssh "${instance}" --command "sudo rm -Rf etcd-v3.3.5-linux-amd64"
   gcloud compute ssh "${instance}" --command "sudo rm -f etcd-v3.3.5-linux-amd64.tar.gz"
   gcloud compute ssh "${instance}" --command "sudo rm -f install-etcd.sh"
+  # Clean-up local
+  rm -f install-etcd.sh
 }
 
 function delete-etcd-control-plane() {
