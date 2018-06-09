@@ -21,7 +21,7 @@ function delete-k8s() {
   delete-etcd
   delete-encryption
   delete-kubeconfigs
-  delete-oki
+  delete-pki
   delete-infra
 }
 
