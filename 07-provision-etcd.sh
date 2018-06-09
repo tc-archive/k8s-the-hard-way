@@ -127,6 +127,21 @@ function delete-etcd-control-plane() {
   done
 }
 
+function verify-etcd() {
+  local env=" ETCDCTL_API=3"
+  local cmd=" etcdctl member list"
+  local endpoint="--endpoints=https://127.0.0.1:2379"
+  local cacert="--cacert=/etc/etcd/ca.pem "
+  local cert="--cert=/etc/etcd/kubernetes.pem"
+  local key="--key=/etc/etcd/kubernetes-key.pem"
+
+  echo "verify etcd control-plane..."
+  for instance in controller-0 controller-1 controller-2; do
+    echo "verify ${instance} etcd service..."
+    gcloud compute ssh "${instance}" --command "sudo ${env} ${cmd} ${endpoint} ${cacert} ${cert} ${key}"
+  done
+}
+
 # Etcd ************************************************************************
 #
 
