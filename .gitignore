@@ -13,3 +13,8 @@
 **/install-kube-scheduler.sh
 **/install-nginx-script.sh
 **/create-api-server-kubelet-rbac-script.sh
+**/install-cni-networking.sh
+**/install-containerd.sh
+**/install-kubelet.sh
+**/install-worker-base.sh
+**/install-kube-proxy.sh

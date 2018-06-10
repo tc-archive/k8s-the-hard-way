@@ -338,7 +338,6 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 EOF2
-
 EOF
   # Set permissions.
   chmod u+x install-kubelet.sh 
@@ -370,9 +369,91 @@ function _uninstall-kubelet() {
 }
 
 
-
 # Configure Kubernetes Proxy **************************************************
 #
+
+function _install-kube-proxy() {
+  local instance=$1
+  # Generate installation script.
+  cat > install-kube-proxy.sh <<EOF
+#!/bin/bash
+
+# Install kube-proxy **********************************************************
+#
+
+# Download kube-proxy binaries.
+#
+wget -q --show-progress --https-only --timestamping \
+  https://storage.googleapis.com/kubernetes-release/release/v1.10.2/bin/linux/amd64/kube-proxy
+
+# Install kube-proxy binaries.
+#
+chmod +x kube-proxy
+sudo cp kube-proxy /usr/local/bin/
+
+sudo mkdir -p /var/lib/kube-proxy/
+sudo cp kube-proxy.kubeconfig /var/lib/kube-proxy/kubeconfig
+
+# Configure kube-proxy ********************************************************
+#
+
+# Create the kube-proxy-config.yaml configuration file:
+#
+cat <<EOF2 | sudo -E tee /var/lib/kube-proxy/kube-proxy-config.yaml
+kind: KubeProxyConfiguration
+apiVersion: kubeproxy.config.k8s.io/v1alpha1
+clientConnection:
+  kubeconfig: "/var/lib/kube-proxy/kubeconfig"
+mode: "iptables"
+clusterCIDR: "10.200.0.0/16"
+EOF2
+
+# Create the kube-proxy.service systemd unit file:
+#
+cat <<EOF2 | sudo -E tee /etc/systemd/system/kube-proxy.service
+[Unit]
+Description=Kubernetes Kube Proxy
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-proxy \\
+  --config=/var/lib/kube-proxy/kube-proxy-config.yaml
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF2
+EOF
+  # Set permissions.
+  chmod u+x install-kube-proxy.sh 
+  # Upload install script.
+  gcloud compute scp install-kube-proxy.sh "${instance}":./
+  # Execute installation script.
+  gcloud compute ssh "${instance}" --command ./install-kube-proxy.sh
+  # Start-up services.
+  gcloud compute ssh "${instance}" --command "sudo systemctl daemon-reload"
+  gcloud compute ssh "${instance}" --command "sudo systemctl enable kube-proxy"
+  gcloud compute ssh "${instance}" --command "sudo systemctl start kube-proxy"
+}
+
+function _uninstall-kube-proxy() {
+  local instance=$1
+  # Shut-down services.
+  gcloud compute ssh "${instance}" --command "sudo systemctl stop kube-proxy"
+  gcloud compute ssh "${instance}" --command "sudo systemctl disable kube-proxy"
+  gcloud compute ssh "${instance}" --command "sudo systemctl daemon-reload"
+  # Delete installation script.
+  gcloud compute ssh "${instance}" --command 'rm -f /etc/systemd/system/kube-proxy.service'
+  gcloud compute ssh "${instance}" --command 'rm -f /var/lib/kube-proxy/kube-proxy-config.yaml'
+  gcloud compute ssh "${instance}" --command 'rm -Rf /var/lib/kube-proxy'
+  gcloud compute ssh "${instance}" --command 'rm -f /usr/local/bin/kube-proxy'
+  gcloud compute ssh "${instance}" --command 'rm -f ./kubelet'
+  gcloud compute ssh "${instance}" --command 'rm -f ./install-kube-proxy.sh'
+  # Delete local script.
+  rm -f ./install-kube-proxy.sh
+}
+
 
 
 # Work Plane *****************************************************************
@@ -396,8 +477,10 @@ function create-work-plane() {
     # _install-cni-networking ${instance}
     # echo "installing ${instance} csi (containerd)..."
     # _install-containerd ${instance}
-    echo "installing ${instance} kubelet..."
-    _install-kubelet ${instance}
+    # echo "installing ${instance} kubelet..."
+    # _install-kubelet ${instance}
+    echo "installing ${instance} kube-proxy..."
+    _install-kube-proxy ${instance}
   done
 }
 
@@ -412,12 +495,14 @@ function verify-work-plane() {
 function delete-work-plane() {
   echo "deleting work-plane..."
   for instance in worker-0 worker-1 worker-2; do
+    echo "uninstalling ${instance} kube-proxy..."
+    _uninstall-kube-proxy ${instance}
+    echo "uninstallng ${instance} kubelet..."
+    _uninstall-kubelet ${instance}
     echo "uninstalling ${instance} containerd..."
     _uinstall-containerd ${instance}
     echo "uninstalling ${instance} cni-networking..."
     _uninstall-cni-networking.sh ${instance}
-    echo "uninstallng ${instance} kubelet..."
-    _uninstall-kubelet ${instance}
   done
 }
 
