@@ -365,6 +365,148 @@ function _delete-nginx-http-health-check() {
   rm -f install-nginx-script.sh
 }
 
+
+# Provision Kubelet RBAC ******************************************************
+#
+
+# Configure RBAC permissions to allow the Kubernetes API Server to access the 
+# Kubelet API on each worker node. Access to the Kubelet API is required for 
+# retrieving metrics, logs, and executing commands in pods.
+
+# sets the Kubelet --authorization-mode flag to Webhook. Webhook mode uses the 
+# SubjectAccessReview API to determine authorization.
+#   * https://kubernetes.io/docs/reference/access-authn-authz/authorization/#checking-api-access
+
+# Create the system:kube-apiserver-to-kubelet ClusterRole with permissions to 
+# access the Kubelet API and perform most common tasks associated with managing pods:
+#   * https://kubernetes.io/docs/reference/access-authn-authz/rbac/#role-and-clusterrole
+
+function _create-api-server-kubelet-rbac() {
+  local instance=$1
+  # Generate installation script.
+  cat > create-api-server-kubelet-rbac-script.sh <<EOF
+#!/bin/bash
+
+# Install and configure nginx health check ************************************
+#
+
+cat <<EOF2 | kubectl apply --kubeconfig admin.kubeconfig -f -
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRole
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:kube-apiserver-to-kubelet
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - nodes/proxy
+      - nodes/stats
+      - nodes/log
+      - nodes/spec
+      - nodes/metrics
+    verbs:
+      - "*"
+EOF2
+
+# The Kubernetes API Server authenticates to the Kubelet as the kubernetes user
+# using the client certificate as defined by the --kubelet-client-certificate 
+# flag.
+# 
+# Bind the system:kube-apiserver-to-kubelet ClusterRole to the kubernetes user:
+#
+cat <<EOF2 | kubectl apply --kubeconfig admin.kubeconfig -f -
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: system:kube-apiserver
+  namespace: ""
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-apiserver-to-kubelet
+subjects:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: User
+    name: kubernetes
+EOF2
+EOF
+  # Set permissions.
+  chmod u+x create-api-server-kubelet-rbac-script.sh
+  # Upload install script.
+  gcloud compute scp create-api-server-kubelet-rbac-script.sh "${instance}":./
+  # Execute installation script.
+  gcloud compute ssh "${instance}" --command ./create-api-server-kubelet-rbac-script.sh
+}
+
+function _delete-api-server-kubelet-rbac() {
+  local instance=$1
+  # Clean up etcd resources.
+  gcloud compute ssh "${instance}" --command "sudo rm -f create-api-server-kubelet-rbac-script.sh"
+  # Clean-up local
+  rm -f create-api-server-kubelet-rbac-script.sh
+}
+
+
+# Provision Kubernetes front-end LoadBalancer *********************************
+#
+
+# Provision an external load balancer to front the Kubernetes API Servers. The 
+# kubernetes-the-hard-way static IP address will be attached to the resulting 
+# load balancer.
+
+# The compute instances created in this tutorial will not have permission to 
+# complete this section. Run the following commands from the same machine used 
+# to create the compute instances.
+
+function _create-front-end-loadbalancer() {
+  KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+  --region $(gcloud config get-value compute/region) \
+  --format 'value(address)')
+
+  gcloud compute http-health-checks create kubernetes \
+    --description "Kubernetes Health Check" \
+    --host "kubernetes.default.svc.cluster.local" \
+    --request-path "/healthz"
+
+  gcloud compute firewall-rules create kubernetes-the-hard-way-allow-health-check \
+    --network kubernetes-the-hard-way \
+    --source-ranges 209.85.152.0/22,209.85.204.0/22,35.191.0.0/16 \
+    --allow tcp
+
+  gcloud compute target-pools create kubernetes-target-pool \
+    --http-health-check kubernetes
+
+  gcloud compute target-pools add-instances kubernetes-target-pool \
+   --instances controller-0,controller-1,controller-2
+
+  gcloud compute forwarding-rules create kubernetes-forwarding-rule \
+    --address ${KUBERNETES_PUBLIC_ADDRESS} \
+    --ports 6443 \
+    --region $(gcloud config get-value compute/region) \
+    --target-pool kubernetes-target-pool
+}
+
+function _delete-front-end-loadbalancer() {
+  gcloud compute -q forwarding-rules delete kubernetes-forwarding-rule \
+    --region $(gcloud config get-value compute/region)
+  gcloud compute -q target-pools delete kubernetes-target-pool
+  gcloud compute -q firewall-rules delete kubernetes-the-hard-way-allow-health-check
+  gcloud compute -q http-health-checks delete kubernetes
+}
+
+function _verify-front-end-loadbalancer() {
+  KUBERNETES_PUBLIC_ADDRESS=$(gcloud compute addresses describe kubernetes-the-hard-way \
+  --region $(gcloud config get-value compute/region) \
+  --format 'value(address)')
+  curl --cacert ca.pem https://${KUBERNETES_PUBLIC_ADDRESS}:6443/version
+  echo
+}
+
+
 # Control Plane ***************************************************************
 #
 
@@ -383,11 +525,16 @@ function _create-control-plane() {
     _install-kube-api-server ${instance}
     echo "installing ${instance} kube-controller-manager service..."
     _install-kube-controller-manager ${instance}
-    echo "installing ${instance} -kube-scheduler service..."
+    echo "installing ${instance} kube-scheduler service..."
     _install-kube-scheduler ${instance}
-    echo "installing ${instance} nginx http-health-check..."
+    echo "installing ${instance} nginx-http-health-check..."
     _install-nginx-http-health-check ${instance}
+    echo "installing ${instance} api-server-kublet-rbac..."
+    _create-api-server-kubelet-rbac ${instance}
   done
+  echo "installing front-end-loadbalancer..."
+  _create-front-end-loadbalancer
+  _verify-front-end-loadbalancer
 }
 
 function verify-control-plane-instance() {
@@ -407,8 +554,14 @@ function verify-control-plane() {
 
 function _delete-control-plane() {
   echo "deleting control-plane..."
+  echo "deleting front-end-loadbalancer..."
+  _delete-front-end-loadbalancer 
   for instance in controller-0 controller-1 controller-2; do
-    echo "uninstalling ${instance} nginx service..."
+    echo "deleting ${instance} front-end-loadbalancer..."
+    _delete-front-end-loadbalancer ${instance} 
+    echo "deleting ${instance} api-server-kubelet-rbac..."
+    _delete-api-server-kubelet-rbac ${instance} 
+    echo "deleting ${instance} nginx service..."
     _delete-nginx-http-health-check ${instance}
     echo "uninstalling ${instance} -kube-scheduler service..."
     _uninstall-kube-scheduler ${instance}

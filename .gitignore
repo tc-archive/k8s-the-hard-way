@@ -12,3 +12,4 @@
 **/install-kube-controller-manager.sh
 **/install-kube-scheduler.sh
 **/install-nginx-script.sh
+**/create-api-server-kubelet-rbac-script.sh
