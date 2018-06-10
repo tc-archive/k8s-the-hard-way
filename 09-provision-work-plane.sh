@@ -30,6 +30,12 @@ function _install-worker-base() {
 sudo apt-get update
 # NB: The socat binary enables support for the kubectl port-forward command.
 sudo apt-get -y install socat conntrack ipset
+
+wget -q --show-progress --https-only --timestamping \
+  https://storage.googleapis.com/kubernetes-release/release/v1.10.2/bin/linux/amd64/kubectl
+
+chmod +x kubectl
+sudo cp kubectl /usr/local/bin/
 EOF
   # Set permissions.
   chmod u+x install-worker-base.sh 
@@ -42,43 +48,12 @@ EOF
 function _uninstall-worker-base() {
   local instance=$1
   # Delete installation script.
-  gcloud compute ssh "${instance}" --command ./install-worker-base.sh
+  gcloud compute ssh "${instance}" --command 'sudo rm -f ./kubectl'
+  gcloud compute ssh "${instance}" --command '/usr/local/bin/kubectl'
+  gcloud compute ssh "${instance}" --command 'sudo apt-get -y uninstall socat conntrack ipset'
   # Delete local script.
   rm -f ./install-worker-base.sh
 }
-
-# # Download Binaries 
-# # 
-# wget -q --show-progress --https-only --timestamping \
-#   https://github.com/kubernetes-incubator/cri-tools/releases/download/v1.0.0-beta.0/crictl-v1.0.0-beta.0-linux-amd64.tar.gz \
-#   https://storage.googleapis.com/kubernetes-the-hard-way/runsc \
-#   https://github.com/opencontainers/runc/releases/download/v1.0.0-rc5/runc.amd64 \
-#   https://github.com/containernetworking/plugins/releases/download/v0.6.0/cni-plugins-amd64-v0.6.0.tgz \
-#   https://github.com/containerd/containerd/releases/download/v1.1.0/containerd-1.1.0.linux-amd64.tar.gz \
-#   https://storage.googleapis.com/kubernetes-release/release/v1.10.2/bin/linux/amd64/kubectl \
-#   https://storage.googleapis.com/kubernetes-release/release/v1.10.2/bin/linux/amd64/kube-proxy \
-#   https://storage.googleapis.com/kubernetes-release/release/v1.10.2/bin/linux/amd64/kubelet
-
-# # Ensure Binary Source
-# # 
-# sudo mkdir -p \
-#   /etc/cni/net.d \
-#   /opt/cni/bin \
-#   /var/lib/kubelet \
-#   /var/lib/kube-proxy \
-#   /var/lib/kubernetes \
-#   /var/run/kubernetes
-
-# # Install Binaries
-# #
-# chmod +x kubectl kube-proxy kubelet runc.amd64 runsc
-# sudo mv runc.amd64 runc
-# sudo mv kubectl kube-proxy kubelet runc runsc /usr/local/bin/
-# sudo tar -xvf crictl-v1.0.0-beta.0-linux-amd64.tar.gz -C /usr/local/bin/
-# sudo tar -xvf cni-plugins-amd64-v0.6.0.tgz -C /opt/cni/bin/
-# sudo tar -xvf containerd-1.1.0.linux-amd64.tar.gz -C /
-
-
 
 # Configure CNI Networking ****************************************************
 #
@@ -156,10 +131,10 @@ function _uninstall-cni-networking() {
 
 # Configure containerd ********************************************************
 #
-function _install-containerd() {
+function _install-cri-containerd() {
   local instance=$1
   # Generate installation script.
-  cat > install-containerd.sh <<EOF
+  cat > install-cri-containerd.sh <<EOF
 #!/bin/bash
 
 # Install containerd **********************************************************
@@ -168,12 +143,15 @@ function _install-containerd() {
 # Download containerd binaries.
 #
 wget -q --show-progress --https-only --timestamping \
+  https://github.com/kubernetes-incubator/cri-tools/releases/download/v1.0.0-beta.0/crictl-v1.0.0-beta.0-linux-amd64.tar.gz \
   https://storage.googleapis.com/kubernetes-the-hard-way/runsc \
   https://github.com/opencontainers/runc/releases/download/v1.0.0-rc5/runc.amd64 \
   https://github.com/containerd/containerd/releases/download/v1.1.0/containerd-1.1.0.linux-amd64.tar.gz
 
+
 # Install containerd binaries.
 #
+sudo tar -xvf crictl-v1.0.0-beta.0-linux-amd64.tar.gz -C /usr/local/bin/
 sudo mv runc.amd64 runc
 chmod +x runc runsc
 sudo cp runc runsc /usr/local/bin/
@@ -227,18 +205,18 @@ WantedBy=multi-user.target
 EOF2
 EOF
   # Set permissions.
-  chmod u+x install-containerd.sh 
+  chmod u+x install-cri-containerd.sh 
   # Upload install script.
-  gcloud compute scp install-containerd.sh "${instance}":./
+  gcloud compute scp install-cri-containerd.sh "${instance}":./
   # Execute installation script.
-  gcloud compute ssh "${instance}" --command ./install-containerd.sh
+  gcloud compute ssh "${instance}" --command ./install-cri-containerd.sh
   # Start-up services.
   gcloud compute ssh "${instance}" --command "sudo systemctl daemon-reload"
   gcloud compute ssh "${instance}" --command "sudo systemctl enable containerd"
   gcloud compute ssh "${instance}" --command "sudo systemctl start containerd"
 }
 
-function _uninstall-containerd() {
+function _uninstall-cri-containerd() {
   local instance=$1
   # Shut-down services.
   gcloud compute ssh "${instance}" --command "sudo systemctl stop containerd"
@@ -249,12 +227,13 @@ function _uninstall-containerd() {
   gcloud compute ssh "${instance}" --command 'rm -f /etc/containerd/config.toml'
   gcloud compute ssh "${instance}" --command 'rm -Rf /etc/containerd'
   gcloud compute ssh "${instance}" --command 'rm -f /bin/{containerd,containerd-release,containerd-shim,containerd-stress,ctr}'
-  gcloud compute ssh "${instance}" --command 'rm -f /usr/local/bin/{runc,runsc}'
+  gcloud compute ssh "${instance}" --command 'rm -f /usr/local/bin/{crictl,runc,runsc}'
   gcloud compute ssh "${instance}" --command 'rm -f ./{runc,runsc}'
   gcloud compute ssh "${instance}" --command 'rm -f ./containerd-1.1.0.linux-amd64.tar.gz'
-  gcloud compute ssh "${instance}" --command 'rm -f ./install-containerd.sh'
+  gcloud compute ssh "${instance}" --command 'rm -f crictl-v1.0.0-beta.0-linux-amd64.tar.gz'
+  gcloud compute ssh "${instance}" --command 'rm -f ./install-cri-containerd.sh'
   # Delete local script.
-  rm -f ./install-cni-networking.sh
+  rm -f ./install-cni-containerd.sh
 }
 
 
@@ -469,16 +448,15 @@ function _reload-work-plane() {
 
 function create-work-plane() {
   echo "creating work-plane..."
-  # for instance in worker-0 worker-1 worker-2; do
-  for instance in worker-0; do
-    # echo "installing ${instance} install-worker-base..."
-    # _install-worker-base ${instance}
-    # echo "installing ${instance} cni-networking..."
-    # _install-cni-networking ${instance}
-    # echo "installing ${instance} csi (containerd)..."
-    # _install-containerd ${instance}
-    # echo "installing ${instance} kubelet..."
-    # _install-kubelet ${instance}
+  for instance in worker-0 worker-1 worker-2; do
+    echo "installing ${instance} install-worker-base..."
+    _install-worker-base ${instance}
+    echo "installing ${instance} cni-networking..."
+    _install-cni-networking ${instance}
+    echo "installing ${instance} cri-containerd..."
+    _install-cri-containerd ${instance}
+    echo "installing ${instance} kubelet..."
+    _install-kubelet ${instance}
     echo "installing ${instance} kube-proxy..."
     _install-kube-proxy ${instance}
   done
@@ -486,9 +464,9 @@ function create-work-plane() {
 
 function verify-work-plane() {
   echo "verify work-plane..."
-  for instance in worker-0 worker-1 worker-2; do
+  for instance in controller-0 controller-1 controller-2; do
     echo "verify ${instance} worker-plane..."
-    verify-worker-plane-instance ${instance}  
+    gcloud compute ssh  ${instance} --command "kubectl get nodes --kubeconfig admin.kubeconfig" 
   done
 }
 
@@ -499,8 +477,8 @@ function delete-work-plane() {
     _uninstall-kube-proxy ${instance}
     echo "uninstallng ${instance} kubelet..."
     _uninstall-kubelet ${instance}
-    echo "uninstalling ${instance} containerd..."
-    _uinstall-containerd ${instance}
+    echo "uninstalling ${instance} cri-containerd..."
+    _uinstall-cri-containerd ${instance}
     echo "uninstalling ${instance} cni-networking..."
     _uninstall-cni-networking.sh ${instance}
   done
