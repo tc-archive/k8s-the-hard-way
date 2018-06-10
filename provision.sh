@@ -8,6 +8,7 @@ source "${DIR}/05-provision-kubeconfigs.sh" ""
 source "${DIR}/06-provision-encryption.sh" ""
 source "${DIR}/07-provision-etcd.sh" ""
 source "${DIR}/08-provision-control-plane.sh" ""
+source "${DIR}/09-provision-work-plane.sh" ""
 
 # K8s Cluster *****************************************************************
 #
