@@ -15,7 +15,7 @@
 #   * kube-proxy: https://kubernetes.io/docs/concepts/cluster-administration/proxies/
 
 
-# Provision Worker BAse *******************************************************
+# Provision Worker Base *******************************************************
 #
 
 function _install-worker-base() {
