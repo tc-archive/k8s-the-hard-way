@@ -8,3 +8,7 @@
 **/*.kubeconfig
 **/encryption-config.yaml
 **/install-etcd.sh
+**/install-kube-api-server.sh
+**/install-kube-controller-manager.sh
+**/install-kube-scheduler.sh
+**/install-nginx-script.sh

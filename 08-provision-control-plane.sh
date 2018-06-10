@@ -11,8 +11,12 @@
 #
 # The following components will be installed on each node: 
 #   * Kubernetes API Server
-#   * Scheduler
 #   * Controller Manager
+#   * Scheduler
+
+
+# Provision Kube API Server ***************************************************
+#
 
 function _install-kube-api-server() {
   local instance=$1
@@ -124,6 +128,10 @@ function _uninstall-kube-api-server() {
   rm -f install-kube-api-server.sh
 }
 
+
+# Provision Kube Controller Manager *******************************************
+#
+
 function _install-kube-controller-manager() {
   local instance=$1
   # Generate installation script.
@@ -205,6 +213,10 @@ function _uninstall-kube-controller-manager() {
   # Clean-up local
   rm -f install-kube-controller-manager.sh
 }
+
+
+# Provision Kube Scheduler ****************************************************
+#
 
 function _install-kube-scheduler() {
   local instance=$1
@@ -305,7 +317,7 @@ function _uninstall-kube-scheduler() {
 function _install-nginx-http-health-check() {
   local instance=$1
   # Generate installation script.
-  cat > install-kube-scheduler.sh <<EOF
+  cat > install-nginx-script.sh <<EOF
 #!/bin/bash
 
 # Install and configure nginx health check ************************************
@@ -325,15 +337,36 @@ server {
 }
 EOF2
 
-sudo mv kubernetes.default.svc.cluster.local \
+sudo cp kubernetes.default.svc.cluster.local \
   /etc/nginx/sites-available/kubernetes.default.svc.cluster.local
 
 sudo ln -s /etc/nginx/sites-available/kubernetes.default.svc.cluster.local /etc/nginx/sites-enabled/
 
-sudo systemctl enable nginx
-sudo systemctl restart nginx
+# sudo systemctl enable nginx
+# sudo systemctl restart nginx
 EOF
+  # Set permissions.
+  chmod u+x install-nginx-script.sh
+  # Upload install script.
+  gcloud compute scp install-nginx-script.sh "${instance}":./
+  # Execute installation script.
+  gcloud compute ssh "${instance}" --command ./install-nginx-script.sh
+  # Start-up services.
+  gcloud compute ssh "${instance}" --command "sudo systemctl daemon-reload"
+  gcloud compute ssh "${instance}" --command "sudo systemctl enable nginx"
+  gcloud compute ssh "${instance}" --command "sudo systemctl restart nginx"
 }
+
+function _delete-nginx-http-health-check() {
+  local instance=$1
+    # Clean up etcd resources.
+  gcloud compute ssh "${instance}" --command "sudo rm -f install-nginx-script.sh"
+  # Clean-up local
+  rm -f install-nginx-script.sh
+}
+
+# Control Plane ***************************************************************
+#
 
 function _reload-control-plane() {
   local instance=$1
@@ -352,33 +385,42 @@ function _create-control-plane() {
     _install-kube-controller-manager ${instance}
     echo "installing ${instance} -kube-scheduler service..."
     _install-kube-scheduler ${instance}
-    echo "installing ${instance} nginx htp health-check..."
+    echo "installing ${instance} nginx http-health-check..."
     _install-nginx-http-health-check ${instance}
+  done
+}
+
+function verify-control-plane-instance() {
+  local instance=$1
+  echo "verify control-plane-instance..."
+  gcloud compute ssh "${instance}" --command "kubectl get componentstatuses --kubeconfig admin.kubeconfig"
+  gcloud compute ssh "${instance}" --command 'curl -s -H "Host: kubernetes.default.svc.cluster.local" -i http://127.0.0.1/healthz'
+}
+
+function verify-control-plane() {
+  echo "verify control-plane..."
+  for instance in controller-0 controller-1 controller-2; do
+    echo "verify ${instance} control-plane..."
+    verify-control-plane-instance ${instance}  
   done
 }
 
 function _delete-control-plane() {
   echo "deleting control-plane..."
   for instance in controller-0 controller-1 controller-2; do
-    echo "uninstalling ${instance} kube-api-server service..."
-    _uninstall-kube-api-server ${instance}
-    echo "uninstalling ${instance} kube-controller-manager service..."
-    _uninstall-kube-controller-manager ${instance}
+    echo "uninstalling ${instance} nginx service..."
+    _delete-nginx-http-health-check ${instance}
     echo "uninstalling ${instance} -kube-scheduler service..."
     _uninstall-kube-scheduler ${instance}
+    echo "uninstalling ${instance} kube-controller-manager service..."
+    _uninstall-kube-controller-manager ${instance}
+    echo "uninstalling ${instance} kube-api-server service..."
+    _uninstall-kube-api-server ${instance}
   done
 }
 
-
-# Control Plane ***************************************************************
-#
-
 function create-control-plane() {
   _create-control-plane
-  # _install-kube-api-server controller-0
-  # _install-kube-controller-manager controller-0
-  # _install-kube-scheduler controller-0
-  # _install-nginx-http-health-check controller-0 
 }
 
 function delete-control-plane() {
