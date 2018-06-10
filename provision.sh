@@ -18,8 +18,11 @@ function create-k8s() {
   create-encryption
   create-etcd
   create-control-plane
+  create-work-plane
 }
+
 function delete-k8s() {
+  delete-work-plane
   delete-control-plane
   delete-etcd
   delete-encryption
