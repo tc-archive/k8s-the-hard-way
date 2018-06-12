@@ -3,6 +3,13 @@
 # Configuring kubectl for Remote Access ***************************************
 #
 
+# generate a kubeconfig file for the kubectl command line utility based on the 
+# admin user credentials.
+
+# Each kubeconfig requires a Kubernetes API Server to connect to. To support 
+# high availability the IP address assigned to the external load balancer 
+# fronting the Kubernetes API Servers will be used.
+
 function configure-kubectl() {
 
   local dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -27,6 +34,11 @@ function configure-kubectl() {
     --user=admin
 
   kubectl config use-context kubernetes-the-hard-way
+}
+
+function verify() {
+  kubectl get componentstatuses
+  kubectl get nodes
 }
 
 # Main ************************************************************************
