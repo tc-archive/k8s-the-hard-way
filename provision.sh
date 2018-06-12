@@ -10,6 +10,7 @@ source "${DIR}/07-provision-etcd.sh" ""
 source "${DIR}/08-provision-control-plane.sh" ""
 source "${DIR}/09-provision-work-plane.sh" ""
 source "${DIR}/10-provision-remote-access-kubectl.sh" ""
+source "${DIR}/11-provision-pod-network-routes.sh" ""
 
 # K8s Cluster *****************************************************************
 #
@@ -23,9 +24,11 @@ function create-k8s() {
   create-work-plane
   configure-kubectl
   verify
+  create-pod-network-routes
 }
 
 function delete-k8s() {
+  delete-pod-network-routes
   delete-work-plane
   delete-control-plane
   delete-etcd
@@ -33,6 +36,7 @@ function delete-k8s() {
   delete-kubeconfigs
   delete-pki
   delete-infra
+
 }
 
 # Main ************************************************************************
