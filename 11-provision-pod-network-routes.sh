@@ -49,7 +49,7 @@ function create-worker-instance-pod-network-routes() {
 function delete-worker-instance-pod-network-routes() {
   echo "deleting worker instance pod network routes"
   for i in 0 1 2; do
-    gcloud compute routes delete kubernetes-route-10-200-${i}-0-24
+    gcloud compute routes delete -q kubernetes-route-10-200-${i}-0-24
   done
 }
 
