@@ -119,12 +119,12 @@ EOF
 function _uninstall-cni-networking() {
   local instance=$1
   # Delete installation script.
-  gcloud compute ssh "${instance}" --command 'rm -f /etc/cni/net.d/99-loopback.conf'
-  gcloud compute ssh "${instance}" --command 'rm -f /etc/cni/net.d/10-bridge.conf'
-  gcloud compute ssh "${instance}" --command 'rm -f /opt/cni/bin/{bridge,dhcp,host-local,loopback,portmap,sample,vlan,flannel,ipvlan,macvlan,ptp,tuning}'
-  gcloud compute ssh "${instance}" --command 'rm -Rf /etc/cni/net.d'
-  gcloud compute ssh "${instance}" --command 'rm -f ./cni-plugins-amd64-v0.6.0.tgz'
-  gcloud compute ssh "${instance}" --command 'rm -f ./install-cni-networking.sh'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /etc/cni/net.d/99-loopback.conf'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /etc/cni/net.d/10-bridge.conf'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /opt/cni/bin/{bridge,dhcp,host-local,loopback,portmap,sample,vlan,flannel,ipvlan,macvlan,ptp,tuning}'
+  gcloud compute ssh "${instance}" --command 'sudo rm -Rf /etc/cni/net.d'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f ./cni-plugins-amd64-v0.6.0.tgz'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f ./install-cni-networking.sh'
   # Delete local script.
   rm -f ./install-cni-networking.sh
 }
@@ -223,15 +223,15 @@ function _uninstall-cri-containerd() {
   gcloud compute ssh "${instance}" --command "sudo systemctl disable containerd"
   gcloud compute ssh "${instance}" --command "sudo systemctl daemon-reload"
   # Delete installation script.
-  gcloud compute ssh "${instance}" --command 'rm -f /etc/systemd/system/containerd.service'
-  gcloud compute ssh "${instance}" --command 'rm -f /etc/containerd/config.toml'
-  gcloud compute ssh "${instance}" --command 'rm -Rf /etc/containerd'
-  gcloud compute ssh "${instance}" --command 'rm -f /bin/{containerd,containerd-release,containerd-shim,containerd-stress,ctr}'
-  gcloud compute ssh "${instance}" --command 'rm -f /usr/local/bin/{crictl,runc,runsc}'
-  gcloud compute ssh "${instance}" --command 'rm -f ./{runc,runsc}'
-  gcloud compute ssh "${instance}" --command 'rm -f ./containerd-1.1.0.linux-amd64.tar.gz'
-  gcloud compute ssh "${instance}" --command 'rm -f crictl-v1.0.0-beta.0-linux-amd64.tar.gz'
-  gcloud compute ssh "${instance}" --command 'rm -f ./install-cri-containerd.sh'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /etc/systemd/system/containerd.service'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /etc/containerd/config.toml'
+  gcloud compute ssh "${instance}" --command 'sudo rm -Rf /etc/containerd'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /bin/{containerd,containerd-release,containerd-shim,containerd-stress,ctr}'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /usr/local/bin/{crictl,runc,runsc}'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f ./{runc,runsc}'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f ./containerd-1.1.0.linux-amd64.tar.gz'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f crictl-v1.0.0-beta.0-linux-amd64.tar.gz'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f ./install-cri-containerd.sh'
   # Delete local script.
   rm -f ./install-cni-containerd.sh
 }
@@ -337,12 +337,12 @@ function _uninstall-kubelet() {
   gcloud compute ssh "${instance}" --command "sudo systemctl disable kubelet"
   gcloud compute ssh "${instance}" --command "sudo systemctl daemon-reload"
   # Delete installation script.
-  gcloud compute ssh "${instance}" --command 'rm -f /etc/systemd/system/kubelet.service'
-  gcloud compute ssh "${instance}" --command 'rm -f /var/lib/kubelet/kubelet-config.yaml'
-  gcloud compute ssh "${instance}" --command 'rm -Rf /var/lib/kubelet'
-  gcloud compute ssh "${instance}" --command 'rm -f /usr/local/bin/kubelet'
-  gcloud compute ssh "${instance}" --command 'rm -f ./kubelet'
-  gcloud compute ssh "${instance}" --command 'rm -f ./install-kubelet.sh'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /etc/systemd/system/kubelet.service'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /var/lib/kubelet/kubelet-config.yaml'
+  gcloud compute ssh "${instance}" --command 'sudo rm -Rf /var/lib/kubelet'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /usr/local/bin/kubelet'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f ./kubelet'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f ./install-kubelet.sh'
   # Delete local script.
   rm -f ./install-kubelet.sh
 }
@@ -423,12 +423,12 @@ function _uninstall-kube-proxy() {
   gcloud compute ssh "${instance}" --command "sudo systemctl disable kube-proxy"
   gcloud compute ssh "${instance}" --command "sudo systemctl daemon-reload"
   # Delete installation script.
-  gcloud compute ssh "${instance}" --command 'rm -f /etc/systemd/system/kube-proxy.service'
-  gcloud compute ssh "${instance}" --command 'rm -f /var/lib/kube-proxy/kube-proxy-config.yaml'
-  gcloud compute ssh "${instance}" --command 'rm -Rf /var/lib/kube-proxy'
-  gcloud compute ssh "${instance}" --command 'rm -f /usr/local/bin/kube-proxy'
-  gcloud compute ssh "${instance}" --command 'rm -f ./kubelet'
-  gcloud compute ssh "${instance}" --command 'rm -f ./install-kube-proxy.sh'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /etc/systemd/system/kube-proxy.service'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /var/lib/kube-proxy/kube-proxy-config.yaml'
+  gcloud compute ssh "${instance}" --command 'sudo rm -Rf /var/lib/kube-proxy'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f /usr/local/bin/kube-proxy'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f ./kubelet'
+  gcloud compute ssh "${instance}" --command 'sudo rm -f ./install-kube-proxy.sh'
   # Delete local script.
   rm -f ./install-kube-proxy.sh
 }
@@ -478,9 +478,9 @@ function delete-work-plane() {
     echo "uninstallng ${instance} kubelet..."
     _uninstall-kubelet ${instance}
     echo "uninstalling ${instance} cri-containerd..."
-    _uinstall-cri-containerd ${instance}
+    _uninstall-cri-containerd ${instance}
     echo "uninstalling ${instance} cni-networking..."
-    _uninstall-cni-networking.sh ${instance}
+    _uninstall-cni-networking ${instance}
   done
 }
 

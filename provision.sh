@@ -16,7 +16,7 @@ source "${DIR}/12-provision-dns.sh" ""
 # K8s Cluster *****************************************************************
 #
 function create-k8s() {
-  # create-infra
+  create-infra
   create-pki
   create-kubeconfigs
   create-encryption
