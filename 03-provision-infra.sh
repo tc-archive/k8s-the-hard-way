@@ -90,6 +90,25 @@ K8S_OS_IMG_FAMILY="ubuntu-1804-lts"
 K8S_OS_IMG_PROJECT="ubuntu-os-cloud"
 K8S_MACHINE_TYPE="n1-standard-1"
 
+function wait-controller-instances() {
+  local finished="false"
+  while [ "${finished}" != "true" ]; do
+    local _res=0
+    for i in 0 1 2; do
+      local status=$(gcloud compute instances list | grep controller-${i} | awk '{print $NF}')
+      echo "Current status: controller-${i} is '${status}'."
+      if [ ! "${status}"='RUNNING' ]; then
+        _res=$(echo ${_res} + 1 | bc)
+      fi
+    done
+    if [ "${_res}" = 0 ]; then
+      finished="true"
+    else
+      sleep 10
+    fi
+  done 
+}
+
 function create-controller-instances() {
   for i in 0 1 2; do
     echo "Creating instance: ${K8S_CONTROLER_INSTANCE_PREFIX}-${i}"
@@ -105,6 +124,7 @@ function create-controller-instances() {
       --scopes compute-rw,storage-ro,service-management,service-control,logging-write,monitoring \
       --tags kubernetes-the-hard-way,controller
   done
+  wait-controller-instances
 }
 
 function delete-controller-instances() {
@@ -112,6 +132,25 @@ function delete-controller-instances() {
     echo "Deleting instance: ${K8S_CONTROLER_INSTANCE_PREFIX}-${i}"
     gcloud compute instances delete -q "${K8S_CONTROLER_INSTANCE_PREFIX}-${i}"
   done
+}
+
+function wait-worker-instances() {
+  local finished="false"
+  while [ "${finished}" != "true" ]; do
+    local _res=0
+    for i in 0 1 2; do
+      local status=$(gcloud compute instances list | grep worker-${i} | awk '{print $NF}')
+      echo "Current status: worker-${i} is '${status}'."
+      if [ ! "${status}"='RUNNING' ]; then
+        _res=$(echo ${_res} + 1 | bc)
+      fi
+    done
+    if [ "${_res}" = 0 ]; then
+      finished="true"
+    else
+      sleep 10
+    fi
+  done 
 }
 
 # NB: The pod network cidr range is specified for each instance as gcloud metadata. 
@@ -131,6 +170,7 @@ function create-worker-instances() {
       --can-ip-forward \
       --tags kubernetes-the-hard-way,worker
   done
+  wait-worker-instances
 }
 
 function delete-worker-instances() {
