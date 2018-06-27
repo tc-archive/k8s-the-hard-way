@@ -153,6 +153,8 @@ function wait-worker-instances() {
   done 
 }
 
+# gcloud compute operations describe  https://www.googleapis.com/compute/v1/projects/kubernetes-197019/zones/europe-west1-c/operations/operation-1530042588945-56f90cd015a6a-4d38ed85-8dbd6db7
+
 # NB: The pod network cidr range is specified for each instance as gcloud metadata. 
 function create-worker-instances() {
   for i in 0 1 2; do

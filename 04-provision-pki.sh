@@ -75,6 +75,7 @@ EOF
 
 
 function delete-certificate-authority() {
+  echo "deleting certificate authority certs"
   rm -f ca-key.pem ca.pem
   rm -f ca-csr.json ca.csr 
   rm -f ca-config.json 
@@ -116,6 +117,7 @@ EOF
 }
 
 function delete-admin-certs() {
+  echo "deleting admin certs"
   rm -f admin-key.pem admin.pem  
   rm -f admin-csr.json admin.csr 
 }
@@ -173,6 +175,7 @@ EOF
 }
 
 function delete-kubelet-certs() {
+    echo "deleting kubelet certs"
   rm -f worker-*.pem worker-*-key.pem 
   rm -f worker-*-csr.json worker-*.csr
 }
@@ -209,6 +212,7 @@ EOF
 }
 
 function delete-kube-controller-manager-certs() {
+  echo "deleting kube controller manager certs"
   rm -f kube-controller-manager-key.pem kube-controller-manager.pem
   rm -f kube-controller-manager-csr.json kube-controller-manager.csr
 }
@@ -245,6 +249,7 @@ EOF
 }
 
 function delete-kube-proxy-certs() {
+  echo "deleting kube proxy certs"
   rm -f kube-proxy-key.pem kube-proxy.pem
   rm -f kube-proxy-csr.json kube-proxy.csr
 }
@@ -281,6 +286,7 @@ EOF
 }
 
 function delete-kube-scheduler-certs() {
+  echo "deleting kube scheduler certs"
   rm -f kube-scheduler-key.pem kube-scheduler.pem
   rm -f kube-scheduler-csr.json kube-scheduler.csr
 }
@@ -327,6 +333,7 @@ EOF
 }
 
 function delete-kube-api-server-certs() {
+  echo "deleting kube api server certs"
   rm -f kubernetes-key.pem kubernetes.pem
   rm -f kubernetes-csr.json kubernetes.csr
 }
@@ -369,6 +376,7 @@ EOF
 }
 
 function delete-kube-service-acount-key-pair() {
+  echo "deleting kube service account pair"
   rm -f service-account-csr.json service-account.csr
   rm -f service-account-key.pem service-account.pem
 }
@@ -378,14 +386,18 @@ function delete-kube-service-acount-key-pair() {
 
 function deploy-controller-certificates() {
   for instance in controller-0 controller-1 controller-2; do
-    gcloud compute scp ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
+    echo "deploying controller certificates to instance ${instance}"
+    gcloud compute scp --strict-host-key-checking=no \
+      ca.pem ca-key.pem kubernetes-key.pem kubernetes.pem \
       service-account-key.pem service-account.pem ${instance}:~/
   done
 }
 
 function deploy-worker-certificates() {
   for instance in worker-0 worker-1 worker-2; do
-    gcloud compute scp ca.pem ${instance}-key.pem ${instance}.pem ${instance}:~/
+    echo "deploying worker certificates to instance ${instance}"
+    gcloud compute scp --strict-host-key-checking=no \
+    ca.pem ${instance}-key.pem ${instance}.pem ${instance}:~/
   done
 }
 
