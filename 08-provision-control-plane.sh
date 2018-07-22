@@ -557,8 +557,6 @@ function _delete-control-plane() {
   echo "deleting front-end-loadbalancer..."
   _delete-front-end-loadbalancer 
   for instance in controller-0 controller-1 controller-2; do
-    echo "deleting ${instance} front-end-loadbalancer..."
-    _delete-front-end-loadbalancer ${instance} 
     echo "deleting ${instance} api-server-kubelet-rbac..."
     _delete-api-server-kubelet-rbac ${instance} 
     echo "deleting ${instance} nginx service..."
